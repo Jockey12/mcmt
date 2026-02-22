@@ -37,6 +37,7 @@ static void render_input(WINDOW *win, char *buf, int *buf_len, int inner_h,
 void drawOuter() { box(stdscr, 0, 0); }
 
 int main() {
+  // words array
   const char *words[] = {
       "this",     "is",       "a",       "text",     "execute",     "thing",
       "that",     "arch",     "types",   "the",      "words",       "typing",
@@ -76,6 +77,7 @@ int main() {
   box(wordwin, 0, 0);
   wrefresh(wordwin);
 
+  // print out random array of words inside inner box
   int row = 1;
   int col = 1;
   for (int n = 0; n < generated_count; n++) {
@@ -92,22 +94,15 @@ int main() {
     col += len + 1;
   }
   wrefresh(wordwin);
-  // for (int n = 0; n < generated_count; n++) {
-  //   mvprintw(height / 2, width / 2, "%s ", word_dict[n]);
-  // }
-  // refresh();
 
+  // if user press C-c; quit
   while ((ch = getch()) != 3) {
-    // mvprintw(1, 1, "pressed: %d  ", ch);
     refresh();
   }
   echo();
   nocbreak();
   refresh();
   getstr(str);
-  // mvprintw(2, 0, "you entered: %s ", str);
-  // getch();
-  // drawBox();
 
   endwin();
   return 0;
