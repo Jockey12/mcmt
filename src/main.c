@@ -8,7 +8,7 @@
 
 static void render_input(WINDOW *win, char *buf, int *buf_len, int inner_h,
                          int inner_w, int *out_row, int *out_col) {
-  werase(win);
+  // werase(win);
   box(win, 0, 0);
 
   int row = 0, col = 0;
@@ -28,6 +28,8 @@ static void render_input(WINDOW *win, char *buf, int *buf_len, int inner_h,
       }
     }
   }
+  *out_col = col;
+  *out_row = row;
 }
 // void drawTitleBox() {
 //   int width, height;
@@ -51,6 +53,10 @@ int main() {
   int width, height;
   int ch;
   char str[90];
+  char buf[LINE_BUF];
+  int buf_len = 0;
+  int out_r = 0;
+  int out_c = 0;
   initscr();
   noecho();
   keypad(stdscr, TRUE);
@@ -59,7 +65,6 @@ int main() {
   srand(time(NULL));
   drawOuter();
   refresh();
-
   const char *word_dict[generated_count];
   for (int i = 0; i < generated_count; i++) {
     word_dict[i] = words[rand() % word_count];
@@ -96,8 +101,21 @@ int main() {
   wrefresh(wordwin);
 
   // if user press C-c; quit
-  while ((ch = getch()) != 3) {
-    refresh();
+  // while ((ch = getch()) != 3) {
+  //   refresh();
+  // }
+  while (1) {
+    ch = getch();
+    if (ch == 3) {
+      break;
+    } else if (ch >= 32 && ch <= 127) {
+      if (buf_len < LINE_BUF) {
+        buf[buf_len++] = ch;
+      }
+    }
+    render_input(wordwin, buf, &buf_len, box_h - 2, box_w - 2, &out_r, &out_c);
+    wmove(wordwin, 1 + out_r, 1 + out_c);
+    wrefresh(wordwin);
   }
   echo();
   nocbreak();
