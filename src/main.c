@@ -48,7 +48,7 @@ int main() {
       "neovim",   "linux",    "fancy",   "navigate", "forget",      "new",
       "that",     "there",    "attempt", "lazy"};
   int word_count = sizeof(words) / sizeof(words[0]);
-  int total_length = 0;
+  // int total_length = 0;
   int generated_count = 100;
   int width, height;
   int ch;
