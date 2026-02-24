@@ -1,5 +1,4 @@
 #include "libs.h"
-#include <ncurses.h>
 #define TB_HEIGHT 3
 #define TB_WIDTH 14
 #define GENERATE_COUNT 100
@@ -77,6 +76,7 @@ int main() {
   int box_w = width - pad_x * 2;
   int box_y = pad_y;
   int box_x = pad_x;
+
   // inner box
   WINDOW *wordwin = newwin(box_h, box_w, box_y, box_x);
   box(wordwin, 0, 0);
@@ -101,9 +101,6 @@ int main() {
   wrefresh(wordwin);
 
   // if user press C-c; quit
-  // while ((ch = getch()) != 3) {
-  //   refresh();
-  // }
   while (1) {
     ch = getch();
     if (ch == 3) {
@@ -117,7 +114,7 @@ int main() {
     wmove(wordwin, 1 + out_r, 1 + out_c);
     wrefresh(wordwin);
   }
-  echo();
+  // echo();
   nocbreak();
   refresh();
   getstr(str);
