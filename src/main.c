@@ -1,4 +1,8 @@
 #include "libs.h"
+#include <ncurses.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #define TB_HEIGHT 3
 #define TB_WIDTH 14
 #define GENERATE_COUNT 100
@@ -30,12 +34,34 @@ static void render_input(WINDOW *win, char *buf, int *buf_len, int inner_h,
   *out_col = col;
   *out_row = row;
 }
-// void drawTitleBox() {
-//   int width, height;
-//   getmaxyx(stdscr, height, width);
-//   newwin(TB_HEIGHT, TB_WIDTH, height / 2, width / 2);
 
 void drawOuter() { box(stdscr, 0, 0); }
+
+void stopWatch() {
+  WINDOW *timer_window = newwin(3, 20, 1, 1);
+
+  if (!timer_window) {
+    endwin();
+    fprintf(stderr, "err");
+    exit(EXIT_FAILURE);
+  }
+  box(timer_window, 0, 0);
+  wrefresh(timer_window);
+  time_t start = time(NULL);
+  nodelay(stdscr, TRUE);
+  while (1) {
+    time_t now = time(NULL);
+
+    wrefresh(timer_window);
+
+    double elaspedT = difftime(time(NULL), start);
+    werase(timer_window);
+    box(timer_window, 0, 0);
+    mvwprintw(timer_window, 1, 1, "elapsed: %.2f s", elaspedT);
+    wrefresh(timer_window);
+    napms(200);
+  }
+}
 
 int main() {
   // words array
@@ -81,6 +107,7 @@ int main() {
   WINDOW *wordwin = newwin(box_h, box_w, box_y, box_x);
   box(wordwin, 0, 0);
   wrefresh(wordwin);
+  stopWatch();
 
   // print out random array of words inside inner box
   int row = 1;
