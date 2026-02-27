@@ -1,8 +1,4 @@
 #include "libs.h"
-#include <ncurses.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #define TB_HEIGHT 3
 #define TB_WIDTH 14
 #define GENERATE_COUNT 100
@@ -107,7 +103,6 @@ int main() {
   WINDOW *wordwin = newwin(box_h, box_w, box_y, box_x);
   box(wordwin, 0, 0);
   wrefresh(wordwin);
-  stopWatch();
 
   // print out random array of words inside inner box
   int row = 1;
@@ -125,6 +120,7 @@ int main() {
     mvwprintw(wordwin, row, col, "%s ", w);
     col += len + 1;
   }
+  stopWatch();
   wrefresh(wordwin);
 
   // if user press C-c; quit
