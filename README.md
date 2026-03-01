@@ -9,4 +9,3 @@ make
 ```
 
 
-* need to implement input from user and be able to type the words on screen

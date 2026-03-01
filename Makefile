@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O2
-LIBS = -lncurses
+LIBS = -lncurses -lmenu
 
 all: mcmt
 

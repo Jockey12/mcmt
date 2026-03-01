@@ -1,4 +1,5 @@
 #include "libs.h"
+
 #define TB_HEIGHT 3
 #define TB_WIDTH 14
 #define GENERATE_COUNT 100
