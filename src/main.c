@@ -34,32 +34,6 @@ static void render_input(WINDOW *win, char *buf, int *buf_len, int inner_h,
 
 void drawOuter() { box(stdscr, 0, 0); }
 
-void stopWatch() {
-  WINDOW *timer_window = newwin(3, 20, 1, 1);
-
-  if (!timer_window) {
-    endwin();
-    fprintf(stderr, "err");
-    exit(EXIT_FAILURE);
-  }
-  box(timer_window, 0, 0);
-  wrefresh(timer_window);
-  time_t start = time(NULL);
-  nodelay(stdscr, TRUE);
-  while (1) {
-    time_t now = time(NULL);
-
-    wrefresh(timer_window);
-
-    double elaspedT = difftime(time(NULL), start);
-    werase(timer_window);
-    box(timer_window, 0, 0);
-    mvwprintw(timer_window, 1, 1, "elapsed: %.2f s", elaspedT);
-    wrefresh(timer_window);
-    napms(200);
-  }
-}
-
 int main() {
   // words array
   const char *words[] = {
@@ -79,9 +53,12 @@ int main() {
   int buf_len = 0;
   int out_r = 0;
   int out_c = 0;
+  int typing_started = 0;
+  time_t start_time = 0;
   initscr();
   noecho();
   keypad(stdscr, TRUE);
+  nodelay(stdscr, TRUE);
 
   getmaxyx(stdscr, height, width);
   srand(time(NULL));
@@ -121,22 +98,41 @@ int main() {
     mvwprintw(wordwin, row, col, "%s ", w);
     col += len + 1;
   }
-  stopWatch();
   wrefresh(wordwin);
+
+  // timer window - bottom right, no border, just text
+  int tw_w = 12;
+  WINDOW *timer_win = newwin(1, tw_w, height - 2, width - tw_w - 2);
+  wrefresh(timer_win);
 
   // if user press C-c; quit
   while (1) {
     ch = getch();
     if (ch == 3) {
       break;
-    } else if (ch >= 32 && ch <= 127) {
-      if (buf_len < LINE_BUF) {
-        buf[buf_len++] = ch;
+    } else if (ch != ERR) {
+      if (!typing_started && ch >= 32 && ch <= 127) {
+        typing_started = 1;
+        start_time = time(NULL);
       }
+      if (ch >= 32 && ch <= 127) {
+        if (buf_len < LINE_BUF) {
+          buf[buf_len++] = ch;
+        }
+      }
+      render_input(wordwin, buf, &buf_len, box_h - 2, box_w - 2, &out_r,
+                   &out_c);
+      wmove(wordwin, 1 + out_r, 1 + out_c);
+      wrefresh(wordwin);
     }
-    render_input(wordwin, buf, &buf_len, box_h - 2, box_w - 2, &out_r, &out_c);
-    wmove(wordwin, 1 + out_r, 1 + out_c);
-    wrefresh(wordwin);
+    if (typing_started) {
+      double elapsed = difftime(time(NULL), start_time);
+      werase(timer_win);
+      mvwprintw(timer_win, 0, 0, "%ds", (int)elapsed);
+      wrefresh(timer_win);
+    }
+    if (ch == ERR)
+      napms(100);
   }
   // echo();
   nocbreak();
