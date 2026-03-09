@@ -1,35 +1,54 @@
 #include "libs.h"
+#include <ncurses.h>
 
 #define TB_HEIGHT 3
 #define TB_WIDTH 14
 #define GENERATE_COUNT 100
 #define MAX_LINES 10
-#define LINE_BUF 512
+#define LINE_BUF 1024
+#define TARGET_BUF 2048
 
-static void render_input(WINDOW *win, char *buf, int *buf_len, int inner_h,
-                         int inner_w, int *out_row, int *out_col) {
-  // werase(win);
+#define COLOR_CORRECT 1
+#define COLOR_WRONG 2
+
+// Renders target text with correct/wrong coloring and a block cursor at
+// buf_len.
+static void render_words(WINDOW *win, const char *target, int target_len,
+                         const char *buf, int buf_len, int inner_h,
+                         int inner_w) {
+  werase(win);
   box(win, 0, 0);
 
   int row = 0, col = 0;
-  for (int i = 0; i < *buf_len; i++) {
-    if (row >= inner_h) {
-      *buf_len = i;
+  for (int i = 0; i < target_len; i++) {
+    if (row >= inner_h)
+      break;
+
+    if (i < buf_len) {
+      if (buf[i] == target[i]) {
+        wattron(win, COLOR_PAIR(COLOR_CORRECT));
+        mvwaddch(win, 1 + row, 1 + col, target[i]);
+        wattroff(win, COLOR_PAIR(COLOR_CORRECT));
+      } else {
+        wattron(win, COLOR_PAIR(COLOR_WRONG));
+        mvwaddch(win, 1 + row, 1 + col, target[i]);
+        wattroff(win, COLOR_PAIR(COLOR_WRONG));
+      }
+    } else if (i == buf_len) {
+      // block cursor: highlight the next letter to type
+      wattron(win, A_REVERSE);
+      mvwaddch(win, 1 + row, 1 + col, target[i]);
+      wattroff(win, A_REVERSE);
+    } else {
+      mvwaddch(win, 1 + row, 1 + col, target[i]);
     }
-    if (buf[i] == '\n') {
+
+    col++;
+    if (col >= inner_w) {
       row++;
       col = 0;
-    } else {
-      mvwaddch(win, 1 + row, 1 + col, (chtype)buf[i]);
-      col++;
-      if (col >= inner_w) {
-        row++;
-        col = 0;
-      }
     }
   }
-  *out_col = col;
-  *out_row = row;
 }
 
 void drawOuter() { box(stdscr, 0, 0); }
@@ -44,18 +63,27 @@ int main() {
       "neovim",   "linux",    "fancy",   "navigate", "forget",      "new",
       "that",     "there",    "attempt", "lazy"};
   int word_count = sizeof(words) / sizeof(words[0]);
-  // int total_length = 0;
-  int generated_count = 100;
+  int generated_count = 150;
   int width, height;
   int ch;
-  char str[90];
   char buf[LINE_BUF];
   int buf_len = 0;
-  int out_r = 0;
-  int out_c = 0;
+  char target[TARGET_BUF];
+  int target_len = 0;
   int typing_started = 0;
   time_t start_time = 0;
   initscr();
+  start_color();
+  use_default_colors();
+  init_pair(COLOR_CORRECT, COLOR_GREEN, -1);
+  init_pair(COLOR_WRONG, COLOR_RED, -1);
+  if (!has_colors()) {
+    endwin();
+    printf("No color support\n");
+    return 1;
+  }
+  init_pair(COLOR_CORRECT, COLOR_GREEN, COLOR_BLACK);
+  init_pair(COLOR_WRONG, COLOR_RED, COLOR_BLACK);
   noecho();
   keypad(stdscr, TRUE);
   nodelay(stdscr, TRUE);
@@ -69,6 +97,18 @@ int main() {
     word_dict[i] = words[rand() % word_count];
   }
 
+  // build flat target string from word_dict
+  for (int i = 0; i < generated_count; i++) {
+    int wlen = strlen(word_dict[i]);
+    if (target_len + wlen + 1 >= TARGET_BUF)
+      break;
+    memcpy(target + target_len, word_dict[i], wlen);
+    target_len += wlen;
+    if (i < generated_count - 1)
+      target[target_len++] = ' ';
+  }
+  target[target_len] = '\0';
+
   // padding, inner box pos
   int pad_y = 2;
   int pad_x = 4;
@@ -79,31 +119,17 @@ int main() {
 
   // inner box
   WINDOW *wordwin = newwin(box_h, box_w, box_y, box_x);
-  box(wordwin, 0, 0);
+  int inner_h = box_h - 2;
+  int inner_w = box_w - 2;
+
+  render_words(wordwin, target, target_len, buf, buf_len, inner_h, inner_w);
   wrefresh(wordwin);
 
-  // print out random array of words inside inner box
-  int row = 1;
-  int col = 1;
-  for (int n = 0; n < generated_count; n++) {
-    const char *w = word_dict[n];
-    int len = strlen(w);
-    if (col + len >= box_w - 1) {
-      row++;
-      col = 1;
-    }
-    if (row >= box_h - 1) {
-      break;
-    }
-    mvwprintw(wordwin, row, col, "%s ", w);
-    col += len + 1;
-  }
-  wrefresh(wordwin);
-
-  // timer window - bottom right, no border, just text
+  // timer window - bottom right borderless
   int tw_w = 12;
   WINDOW *timer_win = newwin(1, tw_w, height - 2, width - tw_w - 2);
   wrefresh(timer_win);
+  //
 
   // if user press C-c; quit
   while (1) {
@@ -111,18 +137,22 @@ int main() {
     if (ch == 3) {
       break;
     } else if (ch != ERR) {
-      if (!typing_started && ch >= 32 && ch <= 127) {
+      if (!typing_started && ch >= 32 && ch <= 126) {
         typing_started = 1;
         start_time = time(NULL);
       }
-      if (ch >= 32 && ch <= 127) {
-        if (buf_len < LINE_BUF) {
+      if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b') {
+        if (buf_len > 0)
+          buf_len--;
+      } else if (ch == '\n' || ch == KEY_ENTER) {
+        // treat Enter as a space
+        if (buf_len < LINE_BUF - 1)
+          buf[buf_len++] = ' ';
+      } else if (ch >= 32 && ch <= 126) {
+        if (buf_len < LINE_BUF - 1)
           buf[buf_len++] = ch;
-        }
       }
-      render_input(wordwin, buf, &buf_len, box_h - 2, box_w - 2, &out_r,
-                   &out_c);
-      wmove(wordwin, 1 + out_r, 1 + out_c);
+      render_words(wordwin, target, target_len, buf, buf_len, inner_h, inner_w);
       wrefresh(wordwin);
     }
     if (typing_started) {
@@ -134,11 +164,7 @@ int main() {
     if (ch == ERR)
       napms(100);
   }
-  // echo();
   nocbreak();
-  refresh();
-  getstr(str);
-
   endwin();
   return 0;
 }
