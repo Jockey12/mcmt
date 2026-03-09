@@ -1,8 +1,8 @@
 # Todo
-- [ ] ~need to implement input from user~ and be able to type the words on screen
-- [ ] colors in terminal when typed wrong and themes.
 - [ ] make a words dictionary in a separate file, maybe json?
 - [ ] add multiple modes, maybe languages too, layouts
-- [X] ~timer~
 - [ ] wpm counter, session tracker .. etc
-- [ ] ~overlay for words on screen~ and user inputted words
+- [X] ~timer~
+- [ ] ~colors in terminal~ when typed wrong and themes.
+- [X] ~overlay for words on screen and user inputted words~
+- [X] ~need to implement input from user and be able to type the words on screen~
